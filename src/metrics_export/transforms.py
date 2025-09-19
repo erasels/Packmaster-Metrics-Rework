@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from metrics_analytics.queries import win_rate_by_asc, pack_pick_rate
+from metrics_analytics.queries import win_rate_by_asc, pack_pick_rate, pack_win_rate
 
 
 def _strip_modid_prefix(obj: str) -> str:
@@ -62,6 +62,25 @@ def pack_pick_rate_insights(db: Path) -> dict:
 
         insights["Pack Pick Rate"]["data"].append(
             [_format_pack(pack), int(picked), int(seen), f"{float(rate) * 100:.2f}"]
+        )
+
+    return insights
+
+
+def pack_win_rate_insights(db: Path, min_runs: int = 100) -> dict:
+    df = pack_win_rate(db, min_runs)  # cols: Pack, Wins, Total, Win Rate
+
+    insights = {
+        "Pack Win Rate": {
+            "description": "Win rate for each pack",
+            "headers": ["Pack", "Wins", "Total", "Win Rate"],
+            "data": []
+        }
+    }
+
+    for pack, wins, total, rate in df.itertuples(index=False, name=None):
+        insights["Pack Win Rate"]["data"].append(
+            [_format_pack(pack), int(wins), int(total), f"{float(rate)*100:.2f}"]
         )
 
     return insights
