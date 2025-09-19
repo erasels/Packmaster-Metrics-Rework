@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from metrics_analytics.queries import win_rate_by_asc, pack_pick_rate, pack_win_rate, card_pick_rate
+from metrics_analytics.queries import win_rate_by_asc, pack_pick_rate, pack_win_rate, card_pick_rate, card_win_rate
 
 
 def _strip_modid_prefix(obj: str) -> str:
@@ -137,6 +137,41 @@ def card_pick_rate_insights(
             _strip_modid_prefix(card),
             int(picked),
             int(seen),
+            f"{float(rate)*100:.2f}"
+        ])
+
+    return insights
+
+
+def card_win_rate_insights(
+    db: Path,
+    card_to_pack: dict[str, str],
+    card_to_rarity: dict[str, str],
+    min_decks: int = 1
+) -> dict:
+    df = card_win_rate(db, min_decks)  # cols: Card, Wins, Total, Win Rate
+
+    insights = {
+        "Win Rate by Card": {
+            "description": "Win rate for each card",
+            "headers": ["Rarity", "Pack", "Card", "Wins", "Total", "Win Rate"],
+            "data": []
+        }
+    }
+
+    for card, wins, total, rate in df.itertuples(index=False, name=None):
+        pack = card_to_pack.get(card)
+        rarity = card_to_rarity.get(card, "Unknown")
+
+        if not pack:
+            continue
+
+        insights["Win Rate by Card"]["data"].append([
+            rarity,
+            _format_pack(pack),
+            _strip_modid_prefix(card),
+            int(wins),
+            int(total),
             f"{float(rate)*100:.2f}"
         ])
 
