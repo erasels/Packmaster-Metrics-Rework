@@ -1,0 +1,19 @@
+[project]
+name = "metrics-analytics"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+  "duckdb>=1.4.0",
+  "pyarrow>=21",
+  "typer>=0.17",
+  "rich>=13",
+  "pydantic>=2",
+  "pandas>=2.3",
+  "numpy>=2.3"
+]
+
+[project.scripts]
+metrics = "metrics_analytics.cli:app"
+
+[tool.pytest.ini_options]
+addopts = "-q"
