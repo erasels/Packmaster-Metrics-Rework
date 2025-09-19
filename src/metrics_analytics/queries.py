@@ -51,7 +51,6 @@ def pack_pick_rate(db: Path):
     return _con(db).execute(sql).df()
 
 
-
 def pack_win_rate(db: Path, min_runs: int = 100):
     w = db.parent.as_posix()
     sql = f"""
@@ -76,7 +75,6 @@ def pack_win_rate(db: Path, min_runs: int = 100):
     return _con(db).execute(sql).df()
 
 
-
 def card_pick_rate(db: Path, min_seen: int = 200):
     w = db.parent.as_posix()
     sql = f"""
@@ -98,7 +96,6 @@ def card_pick_rate(db: Path, min_seen: int = 200):
     return _con(db).execute(sql).df()
 
 
-
 def card_win_rate(db: Path, min_decks: int = 200):
     w = db.parent.as_posix()
     sql = f"""
@@ -112,15 +109,14 @@ def card_win_rate(db: Path, min_decks: int = 200):
       FROM parquet_scan('{w}/runs_parquet')
     )
     SELECT
-      f.card_id                            AS Card,
-      CAST(SUM(r.win) AS INTEGER)          AS Wins,
-      COUNT(*)                             AS Total,
-      AVG(r.win)                           AS Win Rate
+      f.card_id                            AS "Card",
+      CAST(SUM(r.win) AS INTEGER)          AS "Wins",
+      COUNT(*)                             AS "Total",
+      AVG(r.win)                           AS "Win Rate"
     FROM finals f
     JOIN runs r USING (play_id)
     GROUP BY f.card_id
     HAVING COUNT(*) >= {min_decks}
-    ORDER BY win_rate DESC
+    ORDER BY "Win Rate" DESC
     """
     return _con(db).execute(sql).df()
-

@@ -12,8 +12,15 @@ dependencies = [
   "numpy>=2.3"
 ]
 
+[project.optional-dependencies]
+sheets = [
+    "google-api-python-client",
+    "google-auth-oauthlib"
+]
+
 [project.scripts]
 metrics = "metrics_analytics.cli:app"
+metrics-export = "metrics_export.cli:app"
 
 [tool.pytest.ini_options]
 addopts = "-q"
