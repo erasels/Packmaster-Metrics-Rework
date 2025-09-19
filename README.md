@@ -6,5 +6,9 @@ metrics insight pack_pick  --warehouse data/warehouse
 metrics insight pack_win   --warehouse data/warehouse --min-support 200  
 metrics insight card_pick  --warehouse data/warehouse --min-support 500  
 metrics insight card_win   --warehouse data/warehouse --min-support 500  
+  
+metrics-export summary --dry-run
+metrics-export insight card_win --mappings-dir data
+metrics-export all --min-support 200  
 
 Rework of https://github.com/erasels/Packmaster-Metrics
