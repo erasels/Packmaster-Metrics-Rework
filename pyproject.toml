@@ -20,6 +20,7 @@ sheets = [
 
 [project.scripts]
 metrics = "metrics_analytics.cli:app"
+metrics-export = "metrics_export.cli:app"
 
 [tool.pytest.ini_options]
 addopts = "-q"
