@@ -10,7 +10,6 @@ from googleapiclient.errors import HttpError
 
 from metrics_export.sheets.formatting import apply_summary_formatting, pack_wr_by_asc_formatting, freeze_rows_request, header_format_request, \
     auto_resize_request, basic_filter_request
-from metrics_export.transforms import win_rate_by_asc_insights, pack_pick_rate_insights
 
 # Full access scope allows for reading and writing.
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
@@ -214,16 +213,3 @@ def replace_sheet(title: str, *, spreadsheet_id: str = SPREADSHEET_ID, rows: int
     ]
     resp = sheet.batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": reqs}).execute()
     return resp["replies"][1]["addSheet"]["properties"]["sheetId"]
-
-
-def main():
-    db = Path("data/warehouse/metrics.duckdb")
-    if db.exists():
-        #update_insights(win_rate_by_asc_insights(db))
-        update_insights(pack_pick_rate_insights(db))
-    else:
-        print("Failed")
-
-
-if __name__ == "__main__":
-    main()
