@@ -1,7 +1,9 @@
 import json
 from pathlib import Path
 
-from metrics_analytics.queries import win_rate_by_asc, pack_pick_rate, pack_win_rate, card_pick_rate, card_win_rate
+import pandas as pd
+
+from metrics_analytics.queries import win_rate_by_asc, pack_pick_rate, pack_win_rate, card_pick_rate, card_win_rate, pack_asc_win_rate
 
 
 def _strip_modid_prefix(obj: str) -> str:
@@ -174,5 +176,35 @@ def card_win_rate_insights(
             int(total),
             f"{float(rate)*100:.2f}"
         ])
+
+    return insights
+
+
+def pack_asc_win_rate_insights(db: Path, min_runs: int = 1) -> dict:
+    df = pack_asc_win_rate(db, min_runs=min_runs)
+
+    headers = ["Pack", "Overall Win Rate"] + [f"A{lvl}" for lvl in range(20, -1, -1)]
+    insights = {
+        "Win Rate by Pack and Asc": {
+            "description": "Pack win rates across ascension levels",
+            "headers": headers,
+            "data": []
+        }
+    }
+
+    for _, row in df.iterrows():
+        data_row = [
+            _format_pack(row["Pack"]),
+            (
+                f"{float(row['Overall Win Rate'])*100:.2f}"
+                if pd.notna(row.get("Overall Win Rate"))
+                else "N/A"
+            ),
+        ]
+        for lvl in range(20, -1, -1):
+            val = row.get(f"A{lvl}")
+            data_row.append(f"{float(val)*100:.2f}" if pd.notna(val) else "N/A")
+
+        insights["Win Rate by Pack and Asc"]["data"].append(data_row)
 
     return insights

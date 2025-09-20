@@ -9,7 +9,7 @@ from metrics_export.transforms import (
     pack_win_rate_insights,
     card_pick_rate_insights,
     card_win_rate_insights,
-    load_card_mappings,
+    load_card_mappings, pack_asc_win_rate_insights,
 )
 
 app = typer.Typer(no_args_is_help=True)
@@ -41,8 +41,8 @@ def summary(
 
 @app.command()
 def insight(
-        kind: str = typer.Argument(..., help="win_by_asc | pack_pick | pack_win | card_pick | card_win"),
-        db: Path = typer.Option(Path("warehouse/metrics.duckdb")),
+        kind: str = typer.Argument(..., help="win_by_asc | pack_pick | pack_win | card_pick | card_win | win_by_asc_and_pack"),
+        db: Path = typer.Option(Path("data/warehouse/metrics.duckdb")),
         min_support: int = typer.Option(1, help="min rows threshold used by some insights"),
         mappings_dir: Path = typer.Option(Path("data"), help="dir for card→pack/rarity mappings"),
         include_overall: bool = typer.Option(True, help="only for win_by_asc"),
@@ -61,6 +61,8 @@ def insight(
         ins = card_pick_rate_insights(db, card_to_pack, card_to_rarity, min_support)
     elif kind == "card_win":
         ins = card_win_rate_insights(db, card_to_pack, card_to_rarity, min_support)
+    elif kind == "win_by_asc_and_pack":
+        ins = pack_asc_win_rate_insights(db, min_support)
     else:
         raise typer.BadParameter("Unknown kind")
 
@@ -72,7 +74,7 @@ def insight(
 
 @app.command()
 def all(
-        db: Path = typer.Option(Path("warehouse/metrics.duckdb")),
+        db: Path = typer.Option(Path("data/warehouse/metrics.duckdb")),
         min_support: int = typer.Option(1),
         mappings_dir: Path = typer.Option(Path("data")),
         include_overall: bool = typer.Option(True),
@@ -87,6 +89,7 @@ def all(
         pack_win_rate_insights(db, min_support),
         card_pick_rate_insights(db, card_to_pack, card_to_rarity, min_support),
         card_win_rate_insights(db, card_to_pack, card_to_rarity, min_support),
+        pack_asc_win_rate_insights(db, min_support)
     ]
 
     for ins in jobs:

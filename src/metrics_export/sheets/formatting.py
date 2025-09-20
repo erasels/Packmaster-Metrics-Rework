@@ -142,7 +142,7 @@ def pack_wr_by_asc_formatting(content: dict, sheet_id: int) -> list:
                     'sheetId': sheet_id,
                     'startRowIndex': 2,
                     'startColumnIndex': 2,
-                    'endColumnIndex': len(content['headers'])
+                    'endColumnIndex': len(content)
                 }],
                 'booleanRule': {
                     'condition': {
@@ -169,7 +169,7 @@ def pack_wr_by_asc_formatting(content: dict, sheet_id: int) -> list:
                     'sheetId': sheet_id,
                     'startRowIndex': 2,
                     'startColumnIndex': 2,
-                    'endColumnIndex': len(content['headers'])
+                    'endColumnIndex': len(content)
                 }],
                 'booleanRule': {
                     'condition': {
@@ -195,7 +195,7 @@ def pack_wr_by_asc_formatting(content: dict, sheet_id: int) -> list:
                 'sheetId': sheet_id,
                 'dimension': 'COLUMNS',
                 'startIndex': 2,
-                'endIndex': len(content['headers'])
+                'endIndex': len(content)
             },
             'properties': {
                 'pixelSize': 52
@@ -208,7 +208,7 @@ def pack_wr_by_asc_formatting(content: dict, sheet_id: int) -> list:
                 'sheetId': sheet_id,
                 'startRowIndex': 1,
                 'startColumnIndex': 1,
-                'endColumnIndex': len(content['headers'])
+                'endColumnIndex': len(content)
             },
             'cell': {
                 'userEnteredFormat': {
