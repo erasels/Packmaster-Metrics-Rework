@@ -1,8 +1,7 @@
-import json
-import shutil
-import tempfile
+import duckdb
+import os
 from pathlib import Path
-import os, duckdb
+
 from .config import Config
 from .warehouse import connect
 
