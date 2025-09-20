@@ -30,6 +30,7 @@ SQL_PACKS_PRESENT = BASE_CTE + """
 SELECT play_id, year, TRIM(pack) AS pack
 FROM base,
 LATERAL UNNEST(STR_SPLIT(current_packs_csv, ',')) AS t(pack)
+WHERE NULLIF(TRIM(pack), '') IS NOT NULL
 """
 
 SQL_PACK_CHOICES = BASE_CTE + """
@@ -80,6 +81,7 @@ SELECT play_id, year, 'final',
 FROM base
 , LATERAL UNNEST(CAST(json_extract(master_deck, '$') AS JSON[])) AS d(deck_val)
 """
+
 
 def parse_ym_from_path(p: Path) -> tuple[int, int]:
     # expects .../<YYYY>/<MM>/<DD>
