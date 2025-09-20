@@ -101,7 +101,7 @@ def _copy(con: duckdb.DuckDBPyConnection, sql: str, out_dir: Path, params: list[
      ROW_GROUP_SIZE 256000,
      APPEND)
     """, params)
-    # Should probably add ROW_GROUPS_PER_FILE 8, right now I have a lot of small files, recommended is 128-512MB per file
+    # Should probably push all the data into a staging database to prevent so many copy calls, would shrink down the data from 3k files into 4...
 
 
 def discover_files(metrics_root: Path) -> list[Path]:
