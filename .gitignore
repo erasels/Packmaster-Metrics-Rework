@@ -290,3 +290,4 @@ pyrightconfig.json
 
 # Exclude data folder
 data/
+/src/metrics_analytics/tools/metric_cleaner.state.json
