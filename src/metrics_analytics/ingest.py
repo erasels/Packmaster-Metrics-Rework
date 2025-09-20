@@ -97,7 +97,7 @@ def _copy(con: duckdb.DuckDBPyConnection, sql: str, out_dir: Path, params: list[
     (FORMAT PARQUET,
      PARTITION_BY (year),
      COMPRESSION ZSTD,
-     ROW_GROUP_SIZE 256000,
+     ROW_GROUP_SIZE 1000000,
      PER_THREAD_OUTPUT FALSE,
      APPEND)
     """, params)
