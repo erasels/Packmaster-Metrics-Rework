@@ -24,6 +24,7 @@ def apply_summary_formatting(sheet_id):
             }
         ]
 
+    """ Old sections, can be reinstated once all data is up to date
     sections = [
         ([182, 215, 168], 1, 1),
         ([217, 217, 217], 3, 3),
@@ -34,6 +35,12 @@ def apply_summary_formatting(sheet_id):
         ([208, 224, 227], 15, 18),
         ([230, 184, 175], 19, 20),
         ([217, 210, 233], 21, 24)
+    ]"""
+    sections = [
+        ([182, 215, 168], 1, 1),
+        ([217, 217, 217], 3, 3),
+        ([183, 224, 205], 4, 9),    # Green color (updated insights)
+        ([248, 243, 201], 10, 25)   # Yellow color (not updated yet)
     ]
 
     format_requests = []
