@@ -99,6 +99,7 @@ def _copy(con: duckdb.DuckDBPyConnection, sql: str, out_dir: Path, params: list[
      PARTITION_BY (year),
      COMPRESSION ZSTD,
      ROW_GROUP_SIZE 256000,
+     PER_THREAD_OUTPUT FALSE,
      APPEND)
     """, params)
     # Should probably push all the data into a staging database to prevent so many copy calls, would shrink down the data from 3k files into 4...
