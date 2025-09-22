@@ -65,7 +65,7 @@ FROM base b
 """
 
 SQL_PACKS_PRESENT = BASE_CTE + """
-SELECT play_id, year, TRIM(pack) AS pack
+SELECT play_id, year, month, TRIM(pack) AS pack
 FROM base,
 LATERAL UNNEST(STR_SPLIT(current_packs_csv, ',')) AS t(pack)
 WHERE NULLIF(TRIM(pack), '') IS NOT NULL
