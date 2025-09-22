@@ -6,7 +6,7 @@ from rich.table import Table
 from .config import Config
 from .ingest import ingest
 from .queries import (
-    win_rate_by_asc, pack_pick_rate, pack_win_rate, card_pick_rate, card_win_rate, pack_asc_win_rate
+    win_rate_by_asc, pack_pick_rate, pack_win_rate, card_pick_rate, card_win_rate, pack_asc_win_rate, median_deck_size_by_asc
 )
 
 app = typer.Typer(no_args_is_help=True)
@@ -45,6 +45,8 @@ def insight(kind: str,
     db = (warehouse / "metrics.duckdb")
     if kind == "win_by_asc":
         df = win_rate_by_asc(db)
+    elif kind == "median_deck":
+        df = median_deck_size_by_asc(db)
     elif kind == "pack_pick":
         df = pack_pick_rate(db)
     elif kind == "pack_win":

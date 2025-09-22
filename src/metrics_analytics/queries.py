@@ -25,6 +25,27 @@ def win_rate_by_asc(db: Path):
     return _con(db).execute(sql).df()
 
 
+def median_deck_size_by_asc(db: Path):
+    w = db.parent.as_posix()
+    sql = f"""
+    WITH r AS (
+      SELECT
+        ascension_level,
+        master_deck_size
+      FROM parquet_scan('{w}/runs_parquet')
+      WHERE victory
+    )
+    SELECT
+      ascension_level                   AS "Ascension Level",
+      median(master_deck_size)::INT     AS "Median Deck Size",
+      COUNT(*)                          AS "Total Runs"
+    FROM r
+    GROUP BY ascension_level
+    ORDER BY ascension_level
+    """
+    return _con(db).execute(sql).df()
+
+
 def pack_pick_rate(db: Path):
     w = db.parent.as_posix()
     sql = f"""
