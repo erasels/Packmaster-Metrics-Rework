@@ -48,10 +48,8 @@ def _copy_month(con: duckdb.DuckDBPyConnection, sql_tail: str, out_dir: Path, mo
 
     con.execute(f"""
     COPY (
-        {BASE_CTE[:-4]}, filename=true) AS src
-        JOIN to_ingest AS files ON src.filename = files.path
-      )
-      {sql_tail}  -- e.g. the SELECT of SQL_RUNS without the BASE_CTE prefix
+      {BASE_CTE}
+      {sql_tail}
     )
     TO '{out_dir.as_posix()}'
     (FORMAT PARQUET,

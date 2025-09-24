@@ -19,11 +19,12 @@ WITH base AS (
     json_extract(event, '$.packChoices')                     AS packChoices,
     json_extract(event, '$.card_choices')                    AS card_choices,
     json_extract(event, '$.master_deck')                     AS master_deck
-  FROM read_json_auto(?, format='newline_delimited')
+  FROM read_json_auto(?, format='newline_delimited', filename=true) AS src
+  JOIN to_ingest AS files ON src.filename = files.path
 )
 """
 
-SQL_RUNS = BASE_CTE + """
+SQL_RUNS = """
 SELECT
   play_id,
   ts,
@@ -42,7 +43,7 @@ SELECT
   COALESCE(json_array_length(master_deck), 0) AS master_deck_size
 FROM base"""
 
-SQL_MASTER_DECK = BASE_CTE + """
+SQL_MASTER_DECK = """
 SELECT
   b.play_id,
   b.year,
@@ -57,14 +58,14 @@ FROM base b
 , LATERAL UNNEST(CAST(json_extract(b.master_deck, '$') AS JSON[])) AS d(deck_val)
 """
 
-SQL_PACKS_PRESENT = BASE_CTE + """
+SQL_PACKS_PRESENT = """
 SELECT play_id, year, month, TRIM(pack) AS pack
 FROM base,
 LATERAL UNNEST(STR_SPLIT(current_packs_csv, ',')) AS t(pack)
 WHERE NULLIF(TRIM(pack), '') IS NOT NULL
 """
 
-SQL_PACK_CHOICES = BASE_CTE + """
+SQL_PACK_CHOICES = """
 -- one row for the picked pack
 SELECT
   b.play_id,
@@ -89,7 +90,7 @@ FROM base b
 """
 
 
-SQL_CARDS = BASE_CTE + """
+SQL_CARDS = """
 -- picked rows (exclude non-card picks)
 SELECT b.play_id, b.year, b.month, 'choice' AS context,
        REGEXP_REPLACE(json_extract_string(cc_obj, '$.picked'), '\\+\\d+$', '') AS card_id,
