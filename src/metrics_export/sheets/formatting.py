@@ -39,8 +39,8 @@ def apply_summary_formatting(sheet_id):
     sections = [
         ([182, 215, 168], 1, 1),
         ([217, 217, 217], 3, 3),
-        ([183, 224, 205], 4, 9),    # Green color (updated insights)
-        ([248, 243, 201], 10, 25)   # Yellow color (not updated yet)
+        ([183, 224, 205], 4, 10),   # Green color (updated insights)
+        ([248, 243, 201], 11, 25)   # Yellow color (not updated yet)
     ]
 
     format_requests = []

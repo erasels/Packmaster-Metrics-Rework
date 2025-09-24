@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from metrics_analytics.queries import win_rate_by_asc, pack_pick_rate, pack_win_rate, card_pick_rate, card_win_rate, pack_asc_win_rate
+from metrics_analytics.queries import win_rate_by_asc, pack_pick_rate, pack_win_rate, card_pick_rate, card_win_rate, pack_asc_win_rate, median_deck_size_by_asc
 
 
 def _strip_modid_prefix(obj: str) -> str:
@@ -65,6 +65,27 @@ def win_rate_by_asc_insights(db: Path, min_runs: int = 100, include_overall: boo
         if total > min_runs:
             insights["Win Rate by Ascension Level"]["data"].append(
                 [int(asc), int(won), int(total), f"{rate * 100:.2f}"]
+            )
+
+    return insights
+
+
+def median_deck_size_by_asc_insights(db: Path, min_runs: int = 100) -> dict:
+    df = median_deck_size_by_asc(db)  # cols: Ascension Level, Median Deck Size, Total Runs
+
+    insights = {
+        "Median Deck Sizes": {
+            "description": "Median deck size of winning runs for each ascension level",
+            "headers": ["Ascension Level", "Median Deck Size"],
+            "data": []
+        }
+    }
+
+    for row in df.itertuples(index=False):
+        asc, median_sz, total = row
+        if int(total) > min_runs:
+            insights["Median Deck Sizes"]["data"].append(
+                [int(asc), int(median_sz)]
             )
 
     return insights
