@@ -91,11 +91,11 @@ def ingest(config: Config, paths: list[Path] | None = None) -> int:
         month_glob = config.metrics_root.joinpath(f"{y:04d}/{m:02d}/*").as_posix()
 
         # run one COPY per slice for this month
-        _copy_month(con, SQL_RUNS.replace(BASE_CTE, ""),          config.parquet_paths["runs"],          month_glob, files)
-        _copy_month(con, SQL_MASTER_DECK.replace(BASE_CTE, ""),   config.parquet_paths["master_deck"],   month_glob, files)
-        _copy_month(con, SQL_PACKS_PRESENT.replace(BASE_CTE, ""), config.parquet_paths["packs_present"], month_glob, files)
-        _copy_month(con, SQL_PACK_CHOICES.replace(BASE_CTE, ""),  config.parquet_paths["pack_choices"],  month_glob, files)
-        _copy_month(con, SQL_CARDS.replace(BASE_CTE, ""),         config.parquet_paths["cards"],         month_glob, files)
+        _copy_month(con, SQL_RUNS,          config.parquet_paths["runs"],          month_glob, files)
+        _copy_month(con, SQL_MASTER_DECK,   config.parquet_paths["master_deck"],   month_glob, files)
+        _copy_month(con, SQL_PACKS_PRESENT, config.parquet_paths["packs_present"], month_glob, files)
+        _copy_month(con, SQL_PACK_CHOICES,  config.parquet_paths["pack_choices"],  month_glob, files)
+        _copy_month(con, SQL_CARDS,         config.parquet_paths["cards"],         month_glob, files)
 
     # mark all ingested
     con.executemany(
