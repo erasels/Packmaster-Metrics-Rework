@@ -38,7 +38,7 @@ def median_deck_size_by_asc(db: Path):
     SELECT
       ascension_level                   AS "Ascension Level",
       median(master_deck_size)::INT     AS "Median Deck Size",
-      COUNT(*)                          AS "Total Runs"
+      COUNT(*)                          AS "Winning Runs"
     FROM r
     GROUP BY ascension_level
     ORDER BY ascension_level
