@@ -6,7 +6,7 @@ from rich.table import Table
 from .config import Config
 from .ingest import ingest
 from .queries import (
-    win_rate_by_asc, pack_pick_rate, pack_win_rate, card_pick_rate, card_win_rate, pack_asc_win_rate
+    win_rate_by_asc, pack_pick_rate, pack_win_rate, card_pick_rate, card_win_rate, pack_asc_win_rate, median_deck_size_by_asc, expansion_rate
 )
 
 app = typer.Typer(no_args_is_help=True)
@@ -20,8 +20,9 @@ def show_df(df):
         table.add_row(*[str(x) for x in row])
     Console().print(table)
 
+
 @app.command()
-def init(warehouse: Path = typer.Option(Path("warehouse"))):
+def init(warehouse: Path = typer.Option(Path("data/warehouse"))):
     cfg = Config(warehouse_dir=warehouse)
     for p in cfg.parquet_paths.values():
         p.mkdir(parents=True, exist_ok=True)
@@ -30,8 +31,8 @@ def init(warehouse: Path = typer.Option(Path("warehouse"))):
 
 @app.command()
 def load(
-        metrics_root: Path = typer.Option(Path("metrics")),
-        warehouse: Path = typer.Option(Path("warehouse"))
+        metrics_root: Path = typer.Option(Path("data/metrics")),
+        warehouse: Path = typer.Option(Path("data/warehouse"))
 ):
     cfg = Config(metrics_root=metrics_root, warehouse_dir=warehouse)
     n = ingest(cfg)
@@ -40,11 +41,13 @@ def load(
 
 @app.command()
 def insight(kind: str,
-            warehouse: Path = typer.Option(Path("warehouse")),
+            warehouse: Path = typer.Option(Path("data/warehouse")),
             min_support: int = 100):
     db = (warehouse / "metrics.duckdb")
     if kind == "win_by_asc":
         df = win_rate_by_asc(db)
+    elif kind == "median_deck":
+        df = median_deck_size_by_asc(db)
     elif kind == "pack_pick":
         df = pack_pick_rate(db)
     elif kind == "pack_win":
@@ -55,6 +58,8 @@ def insight(kind: str,
         df = card_win_rate(db, min_support)
     elif kind == "win_by_asc_and_pack":
         df = pack_asc_win_rate(db, min_support)
+    elif kind == "expansion_enabled":
+        df = expansion_rate(db)
     else:
         raise typer.BadParameter("Unknown kind")
     show_df(df)

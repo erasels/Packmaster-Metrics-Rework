@@ -16,6 +16,7 @@ class Config(BaseModel):
         w = self.warehouse_dir
         return {
             "runs": w / "runs_parquet",
+            "master_deck": w / "master_deck_parquet",
             "packs_present": w / "packs_present_parquet",
             "pack_choices": w / "pack_choices_parquet",
             "cards": w / "cards_parquet",

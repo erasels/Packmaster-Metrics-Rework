@@ -1,85 +1,12 @@
+from collections import defaultdict
+
 import duckdb
 import os
 from pathlib import Path
 
 from .config import Config
+from .tables import *
 from .warehouse import connect
-
-BASE_CTE = """
-WITH base AS (
-  SELECT
-    event.play_id::VARCHAR                  AS play_id,
-    to_timestamp(time)                      AS ts,
-    ?::INT                                  AS year,
-    ?::INT                                  AS month,
-    coalesce(event.victory::BOOLEAN, FALSE) AS victory,
-    coalesce(event.ascension_level::INT, 0) AS ascension_level,
-    event.character_chosen::VARCHAR         AS character,
-    event.currentPacks::VARCHAR             AS current_packs_csv,
-    json_extract(event, '$.packChoices')    AS packChoices,
-    json_extract(event, '$.card_choices')   AS card_choices,
-    json_extract(event, '$.master_deck')    AS master_deck
-  FROM read_json_auto(?, format='newline_delimited')
-)
-"""
-
-SQL_RUNS = BASE_CTE + "SELECT play_id, ts, year, victory, ascension_level, character FROM base"
-
-SQL_PACKS_PRESENT = BASE_CTE + """
-SELECT play_id, year, TRIM(pack) AS pack
-FROM base,
-LATERAL UNNEST(STR_SPLIT(current_packs_csv, ',')) AS t(pack)
-WHERE NULLIF(TRIM(pack), '') IS NOT NULL
-"""
-
-SQL_PACK_CHOICES = BASE_CTE + """
--- one row for the picked pack
-SELECT
-  b.play_id,
-  b.year,
-  json_extract_string(pc_obj, '$.picked') AS picked_pack,
-  NULL::VARCHAR                           AS not_picked_pack
-FROM base b
-, LATERAL unnest(CAST(json_extract(b.packChoices, '$') AS JSON[])) AS pc(pc_obj)
-
-UNION ALL
-
-SELECT
-  b.play_id,
-  b.year,
-  NULL::VARCHAR                           AS picked_pack,
-  json_extract_string(np_val, '$')        AS not_picked_pack
-FROM base b
-, LATERAL unnest(CAST(json_extract(b.packChoices, '$') AS JSON[])) AS pc(pc_obj)
-, LATERAL unnest(CAST(json_extract(pc_obj, '$.not_picked') AS JSON[])) AS np(np_val)
-"""
-
-
-SQL_CARDS = BASE_CTE + """
--- picked rows (exclude non-card picks)
-SELECT b.play_id, b.year, 'choice' AS context,
-       REGEXP_REPLACE(json_extract_string(cc_obj, '$.picked'), '\\+\\d+$', '') AS card_id,
-       TRUE AS picked
-FROM base b
-, LATERAL UNNEST(CAST(json_extract(b.card_choices, '$') AS JSON[])) AS cc(cc_obj)
-WHERE UPPER(json_extract_string(cc_obj, '$.picked')) <> 'SKIP'
-  AND json_extract_string(cc_obj, '$.picked') <> 'Singing Bowl'
-UNION ALL
--- not-picked rows (extract strings, no quotes)
-SELECT b.play_id, b.year, 'choice',
-       REGEXP_REPLACE(json_extract_string(np_val, '$'), '\\+\\d+$', '') AS card_id,
-       FALSE AS picked
-FROM base b
-, LATERAL UNNEST(CAST(json_extract(b.card_choices, '$') AS JSON[])) AS cc(cc_obj)
-, LATERAL UNNEST(CAST(json_extract(cc_obj, '$.not_picked') AS JSON[])) AS np(np_val)
-UNION ALL
--- final deck rows (extract strings, no quotes)
-SELECT play_id, year, 'final',
-       REGEXP_REPLACE(json_extract_string(deck_val, '$'), '\\+\\d+$', '') AS card_id,
-       NULL AS picked
-FROM base
-, LATERAL UNNEST(CAST(json_extract(master_deck, '$') AS JSON[])) AS d(deck_val)
-"""
 
 
 def parse_ym_from_path(p: Path) -> tuple[int, int]:
@@ -89,21 +16,6 @@ def parse_ym_from_path(p: Path) -> tuple[int, int]:
     return y, m
 
 
-def _copy(con: duckdb.DuckDBPyConnection, sql: str, out_dir: Path, params: list[str | int]):
-    out_dir.mkdir(parents=True, exist_ok=True)
-    con.execute(f"""
-    COPY ({sql})
-    TO '{out_dir.as_posix()}'
-    (FORMAT PARQUET,
-     PARTITION_BY (year),
-     COMPRESSION ZSTD,
-     ROW_GROUP_SIZE 1000000,
-     PER_THREAD_OUTPUT FALSE,
-     APPEND)
-    """, params)
-    # Should probably push all the data into a staging database to prevent so many copy calls, would shrink down the data from 3k files into 4...
-
-
 def discover_files(metrics_root: Path) -> list[Path]:
     return sorted(p for p in metrics_root.glob("*/*/*") if p.is_file())
 
@@ -111,6 +23,44 @@ def discover_files(metrics_root: Path) -> list[Path]:
 def file_sig(p: Path):
     st = os.stat(p)
     return st.st_size, int(st.st_mtime)
+
+
+def _copy_month(con: duckdb.DuckDBPyConnection, sql_tail: str, out_dir: Path, month_glob: str, file_paths: list[str]):
+    """
+        Copy one month of JSON run files into a partitioned Parquet dataset.
+
+        Steps:
+        - Create a temp table listing the exact files to ingest (`file_paths`).
+        - Use read_json_auto on a month glob (e.g. ".../YYYY/MM/*") with filename=true.
+        - Join to the temp table to filter only the changed files.
+        - Apply BASE_CTE + sql_tail to shape the dataset.
+        - Write results into Parquet, partitioned by (year, month).
+        """
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    # Register files for this month
+    con.execute("CREATE TEMP TABLE to_ingest(path TEXT)")
+    con.executemany("INSERT INTO to_ingest VALUES (?)", [(p,) for p in file_paths])
+
+    # Parse year/month from the glob
+    year = int(month_glob.split("/")[-3])
+    month = int(month_glob.split("/")[-2])
+
+    con.execute(f"""
+    COPY (
+      {BASE_CTE}
+      {sql_tail}
+    )
+    TO '{out_dir.as_posix()}'
+    (FORMAT PARQUET,
+     PARTITION_BY (year, month),
+     COMPRESSION ZSTD,
+     ROW_GROUP_SIZE 1000000,
+     PER_THREAD_OUTPUT FALSE,
+     APPEND)
+    """, [year, month, month_glob])
+
+    con.execute("DROP TABLE to_ingest")
 
 
 def ingest(config: Config, paths: list[Path] | None = None) -> int:
@@ -130,19 +80,27 @@ def ingest(config: Config, paths: list[Path] | None = None) -> int:
         con.commit()
         return 0
 
+    # group by (year, month)
+    by_ym = defaultdict(list)
     for f, size, mtime in todo:
         y, m = parse_ym_from_path(f)
-        params = [y, m, f.as_posix()]  # year, month, file path
+        by_ym[(y, m)].append(str(f))
 
-        _copy(con, SQL_RUNS,          config.parquet_paths["runs"],          params)
-        _copy(con, SQL_PACKS_PRESENT, config.parquet_paths["packs_present"], params)
-        _copy(con, SQL_PACK_CHOICES,  config.parquet_paths["pack_choices"],  params)
-        _copy(con, SQL_CARDS,         config.parquet_paths["cards"],         params)
+    # build month globs like ".../YYYY/MM/*"
+    for (y, m), files in by_ym.items():
+        month_glob = config.metrics_root.joinpath(f"{y:04d}/{m:02d}/*").as_posix()
 
-        con.execute(
-            "INSERT OR REPLACE INTO ingested_files VALUES (?,?,?)",
-            [str(f), size, mtime],
-        )
+        # run one COPY per slice for this month
+        _copy_month(con, SQL_RUNS,          config.parquet_paths["runs"],          month_glob, files)
+        _copy_month(con, SQL_MASTER_DECK,   config.parquet_paths["master_deck"],   month_glob, files)
+        _copy_month(con, SQL_PACKS_PRESENT, config.parquet_paths["packs_present"], month_glob, files)
+        _copy_month(con, SQL_PACK_CHOICES,  config.parquet_paths["pack_choices"],  month_glob, files)
+        _copy_month(con, SQL_CARDS,         config.parquet_paths["cards"],         month_glob, files)
 
+    # mark all ingested
+    con.executemany(
+        "INSERT OR REPLACE INTO ingested_files VALUES (?,?,?)",
+        [(str(f), size, mtime) for f, size, mtime in todo],
+    )
     con.commit()
     return len(todo)

@@ -25,6 +25,27 @@ def win_rate_by_asc(db: Path):
     return _con(db).execute(sql).df()
 
 
+def median_deck_size_by_asc(db: Path):
+    w = db.parent.as_posix()
+    sql = f"""
+    WITH r AS (
+      SELECT
+        ascension_level,
+        master_deck_size
+      FROM parquet_scan('{w}/runs_parquet')
+      WHERE victory
+    )
+    SELECT
+      ascension_level                   AS "Ascension Level",
+      median(master_deck_size)::INT     AS "Median Deck Size",
+      COUNT(*)                          AS "Winning Runs"
+    FROM r
+    GROUP BY ascension_level
+    ORDER BY ascension_level
+    """
+    return _con(db).execute(sql).df()
+
+
 def pack_pick_rate(db: Path):
     w = db.parent.as_posix()
     sql = f"""
@@ -124,6 +145,11 @@ def card_win_rate(db: Path, min_decks: int = 200):
 
 def pack_asc_win_rate(db: Path, min_runs: int = 1):
     w = db.parent.as_posix()
+    asc_cols = "\n      ".join(
+        f"MAX(CASE WHEN pa.ascension_level = {lvl} THEN pa.win_rate END) AS \"A{lvl}\","
+        for lvl in range(20, -1, -1)
+    )
+
     sql = f"""
     WITH runs AS (
       SELECT play_id, ascension_level::INT AS ascension_level, victory::INT AS win
@@ -149,27 +175,7 @@ def pack_asc_win_rate(db: Path, min_runs: int = 1):
     SELECT
       po.pack                                         AS "Pack",
       (po.wins::DOUBLE / NULLIF(po.total,0))          AS "Overall Win Rate",
-      MAX(CASE WHEN pa.ascension_level = 20 THEN pa.win_rate END) AS "A20",
-      MAX(CASE WHEN pa.ascension_level = 19 THEN pa.win_rate END) AS "A19",
-      MAX(CASE WHEN pa.ascension_level = 18 THEN pa.win_rate END) AS "A18",
-      MAX(CASE WHEN pa.ascension_level = 17 THEN pa.win_rate END) AS "A17",
-      MAX(CASE WHEN pa.ascension_level = 16 THEN pa.win_rate END) AS "A16",
-      MAX(CASE WHEN pa.ascension_level = 15 THEN pa.win_rate END) AS "A15",
-      MAX(CASE WHEN pa.ascension_level = 14 THEN pa.win_rate END) AS "A14",
-      MAX(CASE WHEN pa.ascension_level = 13 THEN pa.win_rate END) AS "A13",
-      MAX(CASE WHEN pa.ascension_level = 12 THEN pa.win_rate END) AS "A12",
-      MAX(CASE WHEN pa.ascension_level = 11 THEN pa.win_rate END) AS "A11",
-      MAX(CASE WHEN pa.ascension_level = 10 THEN pa.win_rate END) AS "A10",
-      MAX(CASE WHEN pa.ascension_level =  9 THEN pa.win_rate END) AS "A9",
-      MAX(CASE WHEN pa.ascension_level =  8 THEN pa.win_rate END) AS "A8",
-      MAX(CASE WHEN pa.ascension_level =  7 THEN pa.win_rate END) AS "A7",
-      MAX(CASE WHEN pa.ascension_level =  6 THEN pa.win_rate END) AS "A6",
-      MAX(CASE WHEN pa.ascension_level =  5 THEN pa.win_rate END) AS "A5",
-      MAX(CASE WHEN pa.ascension_level =  4 THEN pa.win_rate END) AS "A4",
-      MAX(CASE WHEN pa.ascension_level =  3 THEN pa.win_rate END) AS "A3",
-      MAX(CASE WHEN pa.ascension_level =  2 THEN pa.win_rate END) AS "A2",
-      MAX(CASE WHEN pa.ascension_level =  1 THEN pa.win_rate END) AS "A1",
-      MAX(CASE WHEN pa.ascension_level =  0 THEN pa.win_rate END) AS "A0"
+      {asc_cols}
     FROM pack_overall po
     LEFT JOIN pack_asc pa ON pa.pack = po.pack
     GROUP BY po.pack, po.wins, po.total
@@ -177,3 +183,20 @@ def pack_asc_win_rate(db: Path, min_runs: int = 1):
     """
     return _con(db).execute(sql).df()
 
+
+def expansion_rate(db: Path):
+    w = db.parent.as_posix()
+    sql = f"""
+    WITH agg AS (
+      SELECT
+        COUNT(*) AS total_runs,
+        SUM(CASE WHEN expansion_enabled THEN 1 ELSE 0 END) AS with_expansion
+      FROM parquet_scan('{w}/runs_parquet')
+    )
+    SELECT
+      total_runs                                  AS "Total Runs",
+      with_expansion::INT                         AS "With Expansion",
+      CAST(with_expansion AS DOUBLE) / total_runs AS "Rate"
+    FROM agg
+    """
+    return _con(db).execute(sql).df()
