@@ -6,7 +6,7 @@ from rich.table import Table
 from .config import Config
 from .ingest import ingest
 from .queries import (
-    win_rate_by_asc, pack_pick_rate, pack_win_rate, card_pick_rate, card_win_rate, pack_asc_win_rate, median_deck_size_by_asc
+    win_rate_by_asc, pack_pick_rate, pack_win_rate, card_pick_rate, card_win_rate, pack_asc_win_rate, median_deck_size_by_asc, expansion_rate
 )
 
 app = typer.Typer(no_args_is_help=True)
@@ -58,6 +58,8 @@ def insight(kind: str,
         df = card_win_rate(db, min_support)
     elif kind == "win_by_asc_and_pack":
         df = pack_asc_win_rate(db, min_support)
+    elif kind == "expansion_enabled":
+        df = expansion_rate(db)
     else:
         raise typer.BadParameter("Unknown kind")
     show_df(df)

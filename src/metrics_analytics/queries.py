@@ -183,3 +183,20 @@ def pack_asc_win_rate(db: Path, min_runs: int = 1):
     """
     return _con(db).execute(sql).df()
 
+
+def expansion_rate(db: Path):
+    w = db.parent.as_posix()
+    sql = f"""
+    WITH agg AS (
+      SELECT
+        COUNT(*) AS total_runs,
+        SUM(CASE WHEN expansion_enabled THEN 1 ELSE 0 END) AS with_expansion
+      FROM parquet_scan('{w}/runs_parquet')
+    )
+    SELECT
+      total_runs                                  AS "Total Runs",
+      with_expansion::INT                         AS "With Expansion",
+      CAST(with_expansion AS DOUBLE) / total_runs AS "Rate"
+    FROM agg
+    """
+    return _con(db).execute(sql).df()
