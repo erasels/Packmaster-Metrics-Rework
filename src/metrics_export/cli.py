@@ -9,7 +9,7 @@ from metrics_export.transforms import (
     pack_win_rate_insights,
     card_pick_rate_insights,
     card_win_rate_insights,
-    load_card_mappings, pack_asc_win_rate_insights, median_deck_size_by_asc_insights,
+    load_card_mappings, pack_asc_win_rate_insights, median_deck_size_by_asc_insights, expansion_rate_insights,
 )
 
 app = typer.Typer(no_args_is_help=True)
@@ -41,7 +41,7 @@ def summary(
 
 @app.command()
 def insight(
-        kind: str = typer.Argument(..., help="win_by_asc | pack_pick | pack_win | card_pick | card_win | win_by_asc_and_pack | median_deck_size"),
+        kind: str = typer.Argument(..., help="win_by_asc | pack_pick | pack_win | card_pick | card_win | win_by_asc_and_pack | median_deck_size | expansion_enabled"),
         db: Path = typer.Option(Path("data/warehouse/metrics.duckdb")),
         min_support: int = typer.Option(1, help="min rows threshold used by some insights"),
         mappings_dir: Path = typer.Option(Path("data"), help="dir for card→pack/rarity mappings"),
@@ -65,6 +65,8 @@ def insight(
         ins = pack_asc_win_rate_insights(db, min_support)
     elif kind == "median_deck_size":
         ins = median_deck_size_by_asc_insights(db, min_support)
+    elif kind == "expansion_enabled":
+        ins = expansion_rate_insights(db)
     else:
         raise typer.BadParameter("Unknown kind")
 
@@ -92,7 +94,8 @@ def all(
         card_pick_rate_insights(db, card_to_pack, card_to_rarity, min_support),
         card_win_rate_insights(db, card_to_pack, card_to_rarity, min_support),
         pack_asc_win_rate_insights(db, min_support),
-        median_deck_size_by_asc_insights(db, min_support)
+        median_deck_size_by_asc_insights(db, min_support),
+        expansion_rate_insights(db)
     ]
 
     for ins in jobs:

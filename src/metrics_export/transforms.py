@@ -3,7 +3,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from metrics_analytics.queries import win_rate_by_asc, pack_pick_rate, pack_win_rate, card_pick_rate, card_win_rate, pack_asc_win_rate, median_deck_size_by_asc
+from metrics_analytics.queries import win_rate_by_asc, pack_pick_rate, pack_win_rate, card_pick_rate, card_win_rate, pack_asc_win_rate, median_deck_size_by_asc, \
+    expansion_rate
 
 
 def _strip_modid_prefix(obj: str) -> str:
@@ -227,5 +228,25 @@ def pack_asc_win_rate_insights(db: Path, min_runs: int = 1) -> dict:
             data_row.append(f"{float(val)*100:.2f}" if pd.notna(val) else "N/A")
 
         insights["Win Rate by Pack and Asc"]["data"].append(data_row)
+
+    return insights
+
+
+def expansion_rate_insights(db: Path) -> dict:
+    df = expansion_rate(db)  # cols: Total Runs, With Expansion, Rate
+
+    insights = {
+        "Expansion Pack Usage": {
+            "description": "Percentage of runs with expansion packs enabled",
+            "headers": ["Total Runs", "With Expansion", "Rate"],
+            "data": []
+        }
+    }
+
+    if not df.empty:
+        total = int(df.at[0, "Total Runs"])
+        with_exp = int(df.at[0, "With Expansion"])
+        rate_pct = (float(df.at[0, "Rate"]) * 100.0) if total else 0.0
+        insights["Expansion Pack Usage"]["data"].append([total, with_exp, f"{rate_pct:.2f}"])
 
     return insights
