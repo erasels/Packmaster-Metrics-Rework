@@ -2,6 +2,7 @@ import datetime
 from pathlib import Path
 from typing import Dict, List, Any
 
+from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -18,6 +19,7 @@ SPREADSHEET_ID = "146GPNf1aCHj5URk_oMkYS064HuRcP4vgbtCAkQ9NVWo"
 token_path = Path("data/sheets/token.json")
 credentials_path = Path("data/sheets/credentials.json")
 
+
 # --- Auth ---
 def auth():
     creds = None
@@ -27,14 +29,20 @@ def auth():
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
+            try:
+                creds.refresh(Request())
+            except RefreshError:
+                # Token revoked/invalid -> force new login
+                creds = None
+
+        # If no valid creds, run local server flow to get new token
+        if not creds or not creds.valid:
             flow = InstalledAppFlow.from_client_secrets_file(str(credentials_path), SCOPES)
-            creds = flow.run_local_server(port=0)
+            # offline + consent ensures a refresh token is issued
+            creds = flow.run_local_server(port=0, access_type="offline", prompt="consent")
 
         # Save the credentials for the next run
-        with token_path.open("w") as token:
-            token.write(creds.to_json())
+        token_path.write_text(creds.to_json())
 
     service = build("sheets", "v4", credentials=creds)
     return service.spreadsheets()
